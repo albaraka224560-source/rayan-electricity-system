@@ -6,39 +6,10 @@
     <title>نظام ادارة فواتير كهرباء الريان</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- إصدار متوافق مع الوحدات -->
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDtVgNG_JgLz4L274CKBcW8ux9MKcknUYE",
-            authDomain: "rayan-electricity-d26d4.firebaseapp.com",
-            projectId: "rayan-electricity-d26d4",
-            storageBucket: "rayan-electricity-d26d4.firebasestorage.app",
-            messagingSenderId: "116488482995",
-            appId: "1:116488482995:web:b7fa29dbda388f079c40c6"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        // جعل المتغيرات متاحة globally
-        window.firebaseApp = app;
-        window.firestore = db;
-        window.firebaseAuth = auth;
-        window.firebaseModules = {
-            collection, doc, setDoc, getDoc, serverTimestamp,
-            signInWithEmailAndPassword, onAuthStateChanged
-        };
-
-        console.log('تم تهيئة Firebase بنجاح!');
-    </script>
+    <!-- Firebase Libraries -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <style>
         :root {
@@ -133,7 +104,7 @@
         /* أنماط تسجيل الدخول */
         .login-container {
             max-width: 400px;
-            margin: 100px auto;
+            margin: 50px auto;
             padding: 30px;
             background: white;
             border-radius: 10px;
@@ -203,7 +174,7 @@
         }
         
         .hidden {
-            display: none;
+            display: none !important;
         }
         
         .alert {
@@ -216,6 +187,12 @@
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
 
         /* باقي الأنماط الأساسية */
@@ -266,7 +243,18 @@
             grid-template-columns: 1fr 1fr 1fr;
             gap: 20px;
         }
-        
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--secondary);
+        }
+
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -275,35 +263,51 @@
             .grid-2, .grid-3 {
                 grid-template-columns: 1fr;
             }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
         }
     </style>
 </head>
 <body>
     <!-- شريط حالة الاتصال -->
-    <div id="connectionBar" class="connection-bar">
+    <div id="connectionBar" class="connection-bar offline">
         <span id="connectionStatus">جاري التحقق من الاتصال...</span>
-        <button id="syncButton" class="sync-btn" style="display: none;">
+        <button id="syncButton" class="sync-btn hidden">
             <i class="fas fa-sync-alt"></i> مزامنة مع السحابة
         </button>
     </div>
 
+    <!-- شاشة التحميل -->
+    <div id="loadingScreen" class="loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>جاري تحميل النظام...</p>
+    </div>
+
     <!-- واجهة تسجيل الدخول -->
-    <div id="loginPage" class="login-container">
+    <div id="loginPage" class="login-container hidden">
         <div class="login-header">
             <i class="fas fa-bolt"></i>
             <h2>نظام ادارة فواتير كهرباء الريان</h2>
-            <p>النظام السحابي - متاح من أي جهاز</p>
+            <p id="systemMode">جاري التهيئة...</p>
+        </div>
+
+        <div class="alert alert-info" id="loginInfo">
+            <strong>معلومات الدخول:</strong><br>
+            المستخدم: admin | كلمة المرور: 123
         </div>
         
         <form id="loginForm">
             <div class="form-group">
-                <label for="username">اسم المستخدم أو البريد الإلكتروني</label>
-                <input type="text" id="username" required>
+                <label for="username">اسم المستخدم</label>
+                <input type="text" id="username" value="admin" required>
             </div>
             
             <div class="form-group">
                 <label for="password">كلمة المرور</label>
-                <input type="password" id="password" required>
+                <input type="password" id="password" value="123" required>
             </div>
             
             <div class="form-group">
@@ -315,10 +319,6 @@
         
         <div class="alert alert-danger hidden" id="loginError">
             اسم المستخدم أو كلمة المرور غير صحيحة!
-        </div>
-        
-        <div style="text-align: center; margin-top: 20px; color: #666;">
-            <small>للتسجيل السحابي، استخدم: admin@rayan.com / 123456</small>
         </div>
     </div>
 
@@ -354,13 +354,18 @@
                         <li><a href="#" data-tab="readings"><i class="fas fa-file-invoice"></i> تسجيل القراءات</a></li>
                         <li><a href="#" data-tab="payments"><i class="fas fa-money-bill-wave"></i> قبض المدفوعات</a></li>
                     </ul>
+
+                    <div style="margin-top: 30px; padding: 15px; background: var(--light); border-radius: 5px;">
+                        <h4>حالة النظام</h4>
+                        <p id="systemStatus">جاري التحميل...</p>
+                    </div>
                 </aside>
                 
                 <main class="content">
                     <!-- لوحة التحكم -->
                     <div id="dashboard" class="tab-content active">
                         <h2>لوحة التحكم</h2>
-                        <p>مرحباً بك في نظام ادارة فواتير كهرباء الريان السحابي</p>
+                        <p>مرحباً بك في نظام ادارة فواتير كهرباء الريان</p>
                         
                         <div class="grid-2" style="margin: 30px 0;">
                             <div class="card" style="text-align: center; background: var(--secondary); color: white;">
@@ -374,22 +379,54 @@
                                 <p>إجمالي الفواتير</p>
                             </div>
                         </div>
+
+                        <div class="card">
+                            <h3>إحصائيات سريعة</h3>
+                            <div class="grid-3">
+                                <div style="text-align: center;">
+                                    <h4 id="totalPayments">0</h4>
+                                    <p>إجمالي المدفوعات</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <h4 id="pendingInvoices">0</h4>
+                                    <p>فواتير معلقة</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <h4 id="systemUsers">1</h4>
+                                    <p>مستخدمين النظام</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- باقي التبويبات -->
+                    <!-- إدارة العملاء -->
                     <div id="customers" class="tab-content">
                         <h2>إدارة العملاء</h2>
-                        <!-- محتوى إدارة العملاء -->
+                        <div class="card">
+                            <h3>قائمة العملاء</h3>
+                            <p>هنا سيتم عرض وإدارة بيانات العملاء</p>
+                            <div id="customersList">
+                                <!-- سيتم ملء هذا القسم بالبيانات -->
+                            </div>
+                        </div>
                     </div>
                     
+                    <!-- تسجيل القراءات -->
                     <div id="readings" class="tab-content">
                         <h2>تسجيل القراءات</h2>
-                        <!-- محتوى تسجيل القراءات -->
+                        <div class="card">
+                            <h3>نموذج تسجيل القراءات</h3>
+                            <p>هنا سيتم تسجيل قراءات العدادات</p>
+                        </div>
                     </div>
                     
+                    <!-- قبض المدفوعات -->
                     <div id="payments" class="tab-content">
                         <h2>قبض المدفوعات</h2>
-                        <!-- محتوى المدفوعات -->
+                        <div class="card">
+                            <h3>نموذج قبض المدفوعات</h3>
+                            <p>هنا سيتم تسجيل مدفوعات العملاء</p>
+                        </div>
                     </div>
                 </main>
             </div>
@@ -406,19 +443,57 @@
         let settings = {};
         let currentUser = null;
         let isOnline = navigator.onLine;
+        let firebaseInitialized = false;
 
-        // التحقق من اكتمال تحميل Firebase
-        function waitForFirebase() {
-            return new Promise((resolve) => {
-                const checkFirebase = () => {
-                    if (window.firestore && window.firebaseAuth) {
-                        resolve();
-                    } else {
-                        setTimeout(checkFirebase, 100);
-                    }
+        // تهيئة النظام
+        function initializeSystem() {
+            console.log('بدء تهيئة النظام...');
+            
+            // تحديث حالة الاتصال
+            updateConnectionStatus();
+            
+            // محاولة تهيئة Firebase
+            initializeFirebase();
+            
+            // تحميل البيانات المحلية
+            loadFromLocalStorage();
+            
+            // إظهار واجهة تسجيل الدخول بعد ثانيتين
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('loginPage').classList.remove('hidden');
+                updateSystemInfo();
+            }, 2000);
+        }
+
+        // تهيئة Firebase
+        function initializeFirebase() {
+            try {
+                const firebaseConfig = {
+                    apiKey: "AIzaSyDtVgNG_JgLz4L274CKBcW8ux9MKcknUYE",
+                    authDomain: "rayan-electricity-d26d4.firebaseapp.com",
+                    projectId: "rayan-electricity-d26d4",
+                    storageBucket: "rayan-electricity-d26d4.firebasestorage.app",
+                    messagingSenderId: "116488482995",
+                    appId: "1:116488482995:web:b7fa29dbda388f079c40c6"
                 };
-                checkFirebase();
-            });
+
+                // Initialize Firebase
+                firebase.initializeApp(firebaseConfig);
+                window.firestore = firebase.firestore();
+                window.firebaseAuth = firebase.auth();
+                firebaseInitialized = true;
+                
+                console.log('تم تهيئة Firebase بنجاح');
+                
+                // محاولة تحميل البيانات من السحابة
+                if (isOnline) {
+                    loadFromFirebase();
+                }
+            } catch (error) {
+                console.error('خطأ في تهيئة Firebase:', error);
+                firebaseInitialized = false;
+            }
         }
 
         // التحقق من الاتصال بالإنترنت
@@ -429,14 +504,35 @@
             
             isOnline = navigator.onLine;
             
-            if (isOnline) {
+            if (isOnline && firebaseInitialized) {
                 connectionBar.className = 'connection-bar online';
                 statusText.innerHTML = '<i class="fas fa-wifi"></i> متصل بالإنترنت - النظام السحابي نشط';
-                syncButton.style.display = 'inline-block';
+                syncButton.classList.remove('hidden');
+            } else if (isOnline) {
+                connectionBar.className = 'connection-bar';
+                statusText.innerHTML = '<i class="fas fa-wifi"></i> متصل بالإنترنت - الوضع المحلي';
+                syncButton.classList.add('hidden');
             } else {
                 connectionBar.className = 'connection-bar offline';
                 statusText.innerHTML = '<i class="fas fa-wifi-slash"></i> غير متصل - العمل في الوضع المحلي';
-                syncButton.style.display = 'none';
+                syncButton.classList.add('hidden');
+            }
+        }
+
+        // تحديث معلومات النظام
+        function updateSystemInfo() {
+            const systemMode = document.getElementById('systemMode');
+            const systemStatus = document.getElementById('systemStatus');
+            
+            if (firebaseInitialized && isOnline) {
+                systemMode.textContent = 'النظام السحابي - متاح من أي جهاز';
+                systemStatus.textContent = 'النظام السحابي نشط';
+            } else if (firebaseInitialized) {
+                systemMode.textContent = 'النظام السحابي - غير متصل';
+                systemStatus.textContent = 'النظام السحابي - في انتظار الاتصال';
+            } else {
+                systemMode.textContent = 'النظام المحلي - جاهز للاستخدام';
+                systemStatus.textContent = 'الوضع المحلي نشط';
             }
         }
 
@@ -473,55 +569,23 @@
             } catch (error) {
                 console.error('خطأ في تحميل البيانات المحلية:', error);
             }
+            
+            // إذا لم توجد بيانات، نستخدم البيانات الافتراضية
+            users = getDefaultUsers();
+            settings = getDefaultSettings();
             return false;
-        }
-
-        // الحفظ في Firebase
-        async function saveToFirebase() {
-            if (!isOnline) {
-                console.log('لا يوجد اتصال - تم الحفظ محلياً فقط');
-                return false;
-            }
-
-            try {
-                const user = window.firebaseAuth.currentUser;
-                if (!user) {
-                    console.log('لا يوجد مستخدم مسجل الدخول');
-                    return false;
-                }
-
-                const { doc, setDoc, serverTimestamp } = window.firebaseModules;
-                const data = {
-                    customers: customers,
-                    invoices: invoices,
-                    payments: payments,
-                    users: users,
-                    cashBoxes: cashBoxes,
-                    settings: settings,
-                    lastUpdated: serverTimestamp(),
-                    updatedBy: user.email
-                };
-
-                await setDoc(doc(window.firestore, 'companies', 'rayan_electricity'), data, { merge: true });
-                console.log('تم الحفظ في السحابة بنجاح');
-                return true;
-            } catch (error) {
-                console.error('خطأ في الحفظ السحابي:', error);
-                return false;
-            }
         }
 
         // التحميل من Firebase
         async function loadFromFirebase() {
-            if (!isOnline) {
-                console.log('لا يوجد اتصال - سيتم استخدام البيانات المحلية');
+            if (!isOnline || !firebaseInitialized) {
+                console.log('لا يوجد اتصال أو Firebase غير مهيأ - سيتم استخدام البيانات المحلية');
                 return false;
             }
 
             try {
-                const { doc, getDoc } = window.firebaseModules;
-                const docRef = doc(window.firestore, 'companies', 'rayan_electricity');
-                const docSnap = await getDoc(docRef);
+                const docRef = firebase.firestore().doc('companies/rayan_electricity');
+                const docSnap = await docRef.get();
                 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -545,12 +609,39 @@
             }
         }
 
+        // الحفظ في Firebase
+        async function saveToFirebase() {
+            if (!isOnline || !firebaseInitialized) {
+                console.log('لا يوجد اتصال أو Firebase غير مهيأ - تم الحفظ محلياً فقط');
+                return false;
+            }
+
+            try {
+                const data = {
+                    customers: customers,
+                    invoices: invoices,
+                    payments: payments,
+                    users: users,
+                    cashBoxes: cashBoxes,
+                    settings: settings,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedBy: currentUser ? currentUser.username : 'system'
+                };
+
+                await firebase.firestore().doc('companies/rayan_electricity').set(data, { merge: true });
+                console.log('تم الحفظ في السحابة بنجاح');
+                return true;
+            } catch (error) {
+                console.error('خطأ في الحفظ السحابي:', error);
+                return false;
+            }
+        }
+
         // الدالة الرئيسية للحفظ
         function saveData() {
             saveToLocalStorage();
             
-            // محاولة الحفظ في السحابة إذا كان هناك اتصال
-            if (isOnline) {
+            if (isOnline && firebaseInitialized) {
                 saveToFirebase().catch(error => {
                     console.log('فشل الحفظ التلقائي في السحابة:', error);
                 });
@@ -561,8 +652,8 @@
 
         // المزامنة اليدوية
         async function manualSync() {
-            if (!isOnline) {
-                alert('لا يوجد اتصال بالإنترنت!');
+            if (!isOnline || !firebaseInitialized) {
+                alert('لا يوجد اتصال بالإنترنت أو النظام السحابي غير متاح!');
                 return;
             }
 
@@ -586,45 +677,28 @@
                     password: '123', 
                     fullName: 'مدير النظام', 
                     role: 'admin', 
-                    created: new Date().toISOString(), 
-                    firstLogin: true 
+                    created: new Date().toISOString()
                 }
             ];
         }
 
         function getDefaultSettings() {
             return {
-                electricityRate: 25,
-                dueDays: 15
+                companyName: 'كهرباء الريان',
+                electricityRate: 0.25,
+                dueDays: 15,
+                currency: 'ريال'
             };
         }
 
         // تسجيل الدخول
-        async function loginUser(username, password) {
-            try {
-                // محاولة تسجيل الدخول المحلي أولاً
-                const localUser = users.find(u => u.username === username && u.password === password);
-                
-                if (localUser) {
-                    currentUser = localUser;
-                    return { success: true, type: 'local' };
-                }
-
-                // محاولة تسجيل الدخول السحابي
-                if (isOnline) {
-                    const { signInWithEmailAndPassword } = window.firebaseModules;
-                    const firebaseEmail = username.includes('@') ? username : username + '@rayan.com';
-                    const userCredential = await signInWithEmailAndPassword(window.firebaseAuth, firebaseEmail, password);
-                    currentUser = userCredential.user;
-                    
-                    // تحميل البيانات من السحابة بعد تسجيل الدخول
-                    await loadFromFirebase();
-                    return { success: true, type: 'firebase' };
-                }
-
-                return { success: false, message: 'بيانات الدخول غير صحيحة' };
-            } catch (error) {
-                console.error('خطأ في تسجيل الدخول:', error);
+        function loginUser(username, password) {
+            const user = users.find(u => u.username === username && u.password === password);
+            
+            if (user) {
+                currentUser = user;
+                return { success: true, user: user };
+            } else {
                 return { success: false, message: 'بيانات الدخول غير صحيحة' };
             }
         }
@@ -633,42 +707,37 @@
         function updateDashboard() {
             document.getElementById('totalCustomers').textContent = customers.length;
             document.getElementById('totalInvoices').textContent = invoices.length;
+            document.getElementById('totalPayments').textContent = payments.length;
+            document.getElementById('pendingInvoices').textContent = invoices.filter(inv => !inv.paid).length;
+            document.getElementById('systemUsers').textContent = users.length;
         }
 
         // أحداث التحميل
-        window.addEventListener('DOMContentLoaded', async function() {
-            updateConnectionStatus();
-            
-            // انتظار تهيئة Firebase
-            await waitForFirebase();
-            console.log('Firebase جاهز للاستخدام');
-            
-            // تحميل البيانات
-            loadFromLocalStorage();
-            if (isOnline) {
-                const success = await loadFromFirebase();
-                if (success) {
-                    saveData();
-                }
-            } else {
-                saveData();
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSystem();
 
             // مستمعات الأحداث
-            window.addEventListener('online', updateConnectionStatus);
-            window.addEventListener('offline', updateConnectionStatus);
+            window.addEventListener('online', function() {
+                updateConnectionStatus();
+                updateSystemInfo();
+            });
+            
+            window.addEventListener('offline', function() {
+                updateConnectionStatus();
+                updateSystemInfo();
+            });
             
             // زر المزامنة
             document.getElementById('syncButton').addEventListener('click', manualSync);
 
             // تسجيل الدخول
-            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
                 
-                const result = await loginUser(username, password);
+                const result = loginUser(username, password);
                 
                 if (result.success) {
                     document.getElementById('loginPage').classList.add('hidden');
@@ -683,11 +752,13 @@
             // تسجيل الخروج
             document.getElementById('logoutBtn').addEventListener('click', function(e) {
                 e.preventDefault();
-                document.getElementById('mainApp').classList.add('hidden');
-                document.getElementById('loginPage').classList.remove('hidden');
-                document.getElementById('loginForm').reset();
-                document.getElementById('loginError').classList.add('hidden');
-                currentUser = null;
+                if (confirm('هل تريد تسجيل الخروج؟')) {
+                    document.getElementById('mainApp').classList.add('hidden');
+                    document.getElementById('loginPage').classList.remove('hidden');
+                    document.getElementById('loginForm').reset();
+                    document.getElementById('loginError').classList.add('hidden');
+                    currentUser = null;
+                }
             });
 
             // تبديل التبويبات
@@ -697,20 +768,23 @@
                     const tabId = this.getAttribute('data-tab');
                     
                     if (tabId) {
+                        // إخفاء جميع المحتويات
                         document.querySelectorAll('.tab-content').forEach(tab => {
                             tab.classList.remove('active');
                         });
+                        
+                        // إلغاء تنشيط جميع الروابط
                         document.querySelectorAll('nav a, .sidebar a').forEach(link => {
                             link.classList.remove('active');
                         });
                         
+                        // إظهار المحتوى المحدد
                         document.getElementById(tabId).classList.add('active');
                         this.classList.add('active');
                     }
                 });
             });
         });
-
     </script>
 </body>
 </html>
